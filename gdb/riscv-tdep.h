@@ -50,6 +50,15 @@ enum
   RISCV_LAST_FP_REGNUM = 64,	/* Last Floating Point Register */
 
   RISCV_FIRST_CSR_REGNUM = 65,  /* First CSR */
+
+  RISCV_VSTART = 73,    /* Vector start position.  */
+  RISCV_VXSAT = 74,     /* Fixed-Point Saturate Flag.  */
+  RISCV_VXRM = 75,      /* Fixed-Point Rounding Mode.  */
+  RISCV_VCSR = 80,      /* Vector control and status register.  */
+  RISCV_VL = 3169,      /* Vector length.  */
+  RISCV_VTYPE = 3170,    /* Vector data type register.  */
+  RISCV_VLENB = 3171,    /* VLEN/8 (vector register length in bytes) */
+
 #define DECLARE_CSR(name, num, class, define_version, abort_version) \
   RISCV_ ## num ## _REGNUM = RISCV_FIRST_CSR_REGNUM + num,
 #include "opcode/riscv-opc.h"
@@ -157,6 +166,11 @@ extern int riscv_abi_flen (struct gdbarch *gdbarch);
    target only has 16 x-registers, which includes a reduced number of
    argument registers.  */
 extern bool riscv_abi_embedded (struct gdbarch *gdbarch);
+
+/* Return the width in bytes of the hardware vector registers for
+   GDBARCH.  If this architecture has no vector registers, then
+   return 0.  */
+extern int riscv_isa_vlen (struct gdbarch *gdbarch);
 
 /* Single step based on where the current instruction will take us.  */
 extern std::vector<CORE_ADDR> riscv_software_single_step
