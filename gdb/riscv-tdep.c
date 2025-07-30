@@ -47,6 +47,7 @@
 #include "remote.h"
 #include "target-descriptions.h"
 #include "dwarf2/frame.h"
+#include "dwarf2/expr.h"
 #include "user-regs.h"
 #include "valprint.h"
 #include "opcode/riscv-opc.h"
@@ -652,6 +653,14 @@ struct riscv_vector_feature : public riscv_register_feature
       { RISCV_V0_REGNUM + 29, { "v29" } },
       { RISCV_V0_REGNUM + 30, { "v30" } },
       { RISCV_V0_REGNUM + 31, { "v31" } },
+      /* vector CSRs */
+      { RISCV_CSR_VSTART_REGNUM, { "vstart" } },
+      { RISCV_CSR_VXSAT_REGNUM, { "vxsat" } },
+      { RISCV_CSR_VXRM_REGNUM, { "vxrm" } },
+      { RISCV_CSR_VL_REGNUM, { "vl" } },
+      { RISCV_CSR_VTYPE_REGNUM, { "vtype" } },
+      { RISCV_CSR_VCSR_REGNUM, { "vcsr" } },
+      { RISCV_CSR_VLENB_REGNUM, { "vlenb" } },
     };
   }
 
@@ -683,10 +692,17 @@ struct riscv_vector_feature : public riscv_register_feature
 	return true;
       }
 
-    /* Check all of the vector registers are present.  */
+    /* Check all of the vector registers are present.  We also
+       check that the vector CSRs are present too, though if these
+       are missing this is not fatal.  */
     for (const auto &reg : m_registers)
       {
-	if (!reg.check (tdesc_data, feature_vector, aliases))
+       bool found = reg.check (tdesc_data, feature_vector, aliases);
+
+       bool is_ctrl_reg_p = !(reg.regnum >= RISCV_V0_REGNUM &&
+		       reg.regnum <= RISCV_V31_REGNUM);
+
+       if (!found && !is_ctrl_reg_p)
 	  return false;
       }
 
@@ -696,6 +712,13 @@ struct riscv_vector_feature : public riscv_register_feature
     int vector_bitsize = -1;
     for (const auto &reg : m_registers)
       {
+
+	bool is_ctrl_reg_p = !(reg.regnum >= RISCV_V0_REGNUM &&
+			       reg.regnum <= RISCV_V31_REGNUM);
+
+	if (is_ctrl_reg_p)
+	  continue;
+
 	int reg_bitsize = -1;
 	for (const char *name : reg.names)
 	  {
@@ -817,6 +840,16 @@ riscv_abi_embedded (struct gdbarch *gdbarch)
   riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
   return tdep->abi_features.embedded;
 }
+
+/* See riscv-tdep.h.  */
+
+int
+riscv_isa_vlen (struct gdbarch *gdbarch)
+{
+  riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
+  return tdep->isa_features.vlen;
+}
+
 
 /* Return true if the target for GDBARCH has floating point hardware.  */
 
@@ -1460,7 +1493,19 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
       return false;
     }
   else if (reggroup == vector_reggroup)
-    return (regnum >= RISCV_V0_REGNUM && regnum <= RISCV_V31_REGNUM);
+    {
+      if (regnum >= RISCV_V0_REGNUM && regnum <= RISCV_V31_REGNUM)
+	return true;
+      if (regnum == RISCV_CSR_VSTART_REGNUM
+	  || regnum == RISCV_CSR_VXSAT_REGNUM
+	  || regnum == RISCV_CSR_VXRM_REGNUM
+	  || regnum == RISCV_CSR_VL_REGNUM
+	  || regnum == RISCV_CSR_VTYPE_REGNUM
+	  || regnum == RISCV_CSR_VCSR_REGNUM
+	  || regnum == RISCV_CSR_VLENB_REGNUM)
+	return true;
+      return false;
+    }
   else
     return false;
 }
