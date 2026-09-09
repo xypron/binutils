@@ -28,12 +28,19 @@ struct riscv_gdbarch_features riscv_linux_read_features (int tid);
 
 #define RISCV_MAX_VLENB (8192)
 
-/* Some branches and/or commits of linux kernel named this "struct __riscv_v_state",
-   and later it was changed to "struct __riscv_v_ext_state",
-   so using a macro to stand-in for that struct type to make it easier to modify
-   in a single place, if compiling against one of those older Linux kernel commits */
+/* This must be the struct describing the fixed-size header that precedes
+   the vector register data (v0..v31) in the ptrace wire format used for
+   PTRACE_GETREGSET/PTRACE_SETREGSET with NT_RISCV_VECTOR, i.e.
+   "struct __riscv_v_regset_state" ({ vstart, vl, vtype, vcsr, vlenb,
+   vreg[] }), and NOT the similarly named, but different,
+   "struct __riscv_v_ext_state" ({ vstart, vl, vtype, vcsr, vlenb,
+   datap }), which some branches/commits of the Linux kernel called
+   "struct __riscv_v_state".  Using a macro to stand-in for that struct
+   type to make it easier to modify in a single place, if compiling
+   against older Linux kernel headers that lack the definition of
+   struct __riscv_v_regset_state.  */
 #ifndef RISCV_VECTOR_STATE_T
-#define RISCV_VECTOR_STATE_T struct __riscv_v_ext_state
+#define RISCV_VECTOR_STATE_T struct __riscv_v_regset_state
 #endif
 
 /* Struct for use in ptrace() calls for vector CSRs/registers */

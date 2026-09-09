@@ -133,10 +133,13 @@ static const regcache_map_entry riscv_linux_vregmap[] =
   { 1, RISCV_CSR_VL_REGNUM, MEMBER_SIZE(struct __riscv_vregs, vstate.vl) },
   { 1, RISCV_CSR_VTYPE_REGNUM, MEMBER_SIZE(struct __riscv_vregs, vstate.vtype) },
   { 1, RISCV_CSR_VCSR_REGNUM, MEMBER_SIZE(struct __riscv_vregs, vstate.vcsr) },
-  /* struct __riscv_vregs member "datap" is a pointer that doesn't correspond
-     to a register value.  In the context of ptrace(), member is always zero,
-     with V0..V31 values inline after that.  So, skipping datap */
-  { 1, REGCACHE_MAP_SKIP, MEMBER_SIZE(struct __riscv_vregs, vstate.datap) },
+  /* struct __riscv_vregs member "vlenb" does not correspond to a writable
+     GDB register via this regset (it is supplied/collected separately, see
+     RISCV_CSR_VLENB_REGNUM handling in supply_vregset_regnum () and the
+     comment in fill_vregset ()), but it still occupies space right before
+     V0..V31 in the ptrace wire format, so it must be skipped here to keep
+     the offsets of the following fields correct.  */
+  { 1, REGCACHE_MAP_SKIP, MEMBER_SIZE(struct __riscv_vregs, vstate.vlenb) },
   /* Here's V0..V31.  Specifying 0 as size leads to a call to register_size()
      for size determination */
   { 32, RISCV_V0_REGNUM, 0 },
